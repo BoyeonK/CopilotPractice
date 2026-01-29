@@ -14,8 +14,9 @@ protected:
     void onMessage(CustomClass msg) override {
         // process message (print)
         std::cout << "Actor received: " << msg.text << " -> " << msg.value << std::endl;
-        // optionally return to pool by constructing a new object and releasing
-        // Here we don't have the original pointer, so skipping pool.release.
+        // Example: when processed, return a new object to pool (simulate reuse)
+        CustomClass* p = pool_.acquire(msg.text + "-ret", msg.value);
+        pool_.release(p);
     }
 
 private:

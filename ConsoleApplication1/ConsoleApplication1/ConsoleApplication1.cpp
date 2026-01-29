@@ -5,6 +5,7 @@
 #include <cstring>
 #include <chrono>
 #include <thread>
+#include "AsyncWriter.h"
 
 int main()
 {
