@@ -1,33 +1,24 @@
 ﻿#include <iostream>
 #include "CustomClass.h"
 #include "ObjectPool.h"
+#include "ActorExample.h"
 
 int main()
 {
     // create pool with 2 pre-allocated objects
     ObjectPool<CustomClass> pool(2);
-    std::cout << "capacity: " << pool.capacity() << ", available: " << pool.available() << std::endl;
 
-    // acquire two objects
-    CustomClass* c1 = pool.acquire("obj1", 10);
-    CustomClass* c2 = pool.acquire("obj2", 20);
-    std::cout << c1->text << ": " << c1->value << std::endl;
-    std::cout << c2->text << ": " << c2->value << std::endl;
-    std::cout << "available after acquire: " << pool.available() << std::endl;
+    CustomActor actor(pool);
+    actor.start();
 
-    // release one object back to pool
-    pool.release(c1);
-    std::cout << "available after release c1: " << pool.available() << std::endl;
+    // post messages to actor
+    actor.post(CustomClass("hello", 1));
+    actor.post(CustomClass("world", 2));
 
-    // acquire another object (should reuse released one)
-    CustomClass* c3 = pool.acquire("obj3", 30);
-    std::cout << c3->text << ": " << c3->value << std::endl;
-    std::cout << "available after acquiring c3: " << pool.available() << std::endl;
+    // allow some time for actor to process
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    // return objects to pool
-    pool.release(c2);
-    pool.release(c3);
-    std::cout << "final available: " << pool.available() << std::endl;
+    actor.stop();
 
     return 0;
 }
