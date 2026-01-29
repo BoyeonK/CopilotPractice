@@ -1,24 +1,63 @@
 ﻿#include <iostream>
-#include "CustomClass.h"
-#include "ObjectPool.h"
-#include "ActorExample.h"
+#include <cstring>
+#include <cerrno>
+#include <fcntl.h>
+#include <unistd.h>
+#include <liburing.h>
 
 int main()
 {
-    // create pool with 2 pre-allocated objects
-    ObjectPool<CustomClass> pool(2);
+    struct io_uring ring;
+    if (io_uring_queue_init(8, &ring, 0) < 0) {
+        std::cerr << "io_uring_queue_init failed\n";
+        return 1;
+    }
 
-    CustomActor actor(pool);
-    actor.start();
+    const char* filename = "io_uring_example.txt";
+    int fd = open(filename, O_CREAT | O_WRONLY, 0644);
+    if (fd < 0) {
+        std::cerr << "open failed: " << std::strerror(errno) << "\n";
+        io_uring_queue_exit(&ring);
+        return 1;
+    }
 
-    // post messages to actor
-    actor.post(CustomClass("hello", 1));
-    actor.post(CustomClass("world", 2));
+    const char* msg = "Hello from io_uring\n";
+    size_t len = std::strlen(msg);
 
-    // allow some time for actor to process
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    struct io_uring_sqe* sqe = io_uring_get_sqe(&ring);
+    if (!sqe) {
+        std::cerr << "io_uring_get_sqe failed\n";
+        close(fd);
+        io_uring_queue_exit(&ring);
+        return 1;
+    }
 
-    actor.stop();
+    io_uring_prep_write(sqe, fd, msg, static_cast<unsigned int>(len), 0);
+    sqe->user_data = 0x1;
 
+    if (io_uring_submit(&ring) < 0) {
+        std::cerr << "io_uring_submit failed\n";
+        close(fd);
+        io_uring_queue_exit(&ring);
+        return 1;
+    }
+
+    struct io_uring_cqe* cqe;
+    if (io_uring_wait_cqe(&ring, &cqe) < 0) {
+        std::cerr << "io_uring_wait_cqe failed\n";
+        close(fd);
+        io_uring_queue_exit(&ring);
+        return 1;
+    }
+
+    if (cqe->res < 0) {
+        std::cerr << "write failed: " << std::strerror(-cqe->res) << "\n";
+    } else {
+        std::cout << "wrote " << cqe->res << " bytes to '" << filename << "'\n";
+    }
+
+    io_uring_cqe_seen(&ring, cqe);
+    close(fd);
+    io_uring_queue_exit(&ring);
     return 0;
 }

@@ -130,7 +130,10 @@
     <ClCompile Include="ConsoleApplication1.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Actor.h" />
+    <ClInclude Include="ActorExample.h" />
     <ClInclude Include="CustomClass.h" />
+    <ClInclude Include="MPSCQueue.h" />
     <ClInclude Include="ObjectPool.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
